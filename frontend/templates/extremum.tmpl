@@ -1,15 +1,16 @@
 <div style="margin-top: 20px; margin-left: 20px;">
-    <p><strong>Индикатор SMA (Simple Moving Average)</p>
+    <p><strong>Индикатор extremum </p>
     <div id="chart" style="margin-top: 20px;"></div>
 </div>
 
 <script type="module">
-    import { buildSMA } from '{{ .EntryJS }}';
+    import { buildExtremum } from '{{ .EntryJS }}';
 
     // Данные, переданные из Go
     const chartData = {{ .ChartData }};
-    const sma = {{ .SMAIndicator }};
+    const highIndicator = {{ .HighIndicator }};
+    const lowIndicator = {{ .LowIndicator }};
     
     // Вызов функции с аргументами
-    buildSMA(chartData,sma);
+    buildExtremum(chartData,highIndicator,lowIndicator);
 </script>
