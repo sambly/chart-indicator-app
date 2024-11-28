@@ -29,16 +29,15 @@ func main() {
 			panic(fmt.Sprintf("Ошибка при загрузке манифеста: %v", err))
 		}
 
-		entry, ok := manifest["src/main.ts"].(map[string]interface{})
+		entry, ok := manifest["src/main"].(map[string]interface{})
 		if !ok {
-			panic("Ошибка: 'src/main.ts' не найден в манифесте")
+			panic("Ошибка: 'src/main' не найден в манифесте")
 		}
 
 		entryJS, ok = entry["file"].(string)
 		if !ok {
-			panic("Ошибка: ключ 'file' отсутствует в записи 'src/main.ts'")
+			panic("Ошибка: ключ 'file' отсутствует в записи 'src/main'")
 		}
-
 	} else {
 		// Development: Используем Vite Dev Server
 		entryJS = "http://localhost:5173/src/main.ts" // Vite dev server
@@ -48,7 +47,8 @@ func main() {
 		r.Static("/assets", "./frontend/dist/assets")
 	}
 
-	r.GET("/", getChart)
+	r.GET("/", home)
+	r.GET("/sma", getSMA)
 
 	r.Run(":8080")
 

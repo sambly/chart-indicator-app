@@ -1,0 +1,12 @@
+    <div id="chart"></div>
+
+    <script type="module">
+        import { buildSMA } from "{{ .EntryJS }}";
+
+        // Данные, переданные из Go
+        const chartData = {{ .ChartData }};
+        const sma = {{ .SMAIndicator }};
+        
+        // Вызов функции с аргументами
+        buildSMA(chartData,sma);
+    </script>
