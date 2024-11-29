@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"html/template"
-
 	"github.com/gin-gonic/gin"
 	"github.com/markcheno/go-quote"
 	"github.com/markcheno/go-talib"
@@ -63,9 +61,16 @@ func getHighLow(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "extremum.tmpl", gin.H{
-		"EntryJS":       template.JS(entryJS),
+		"EntryJS":       entryJS,
 		"ChartData":     q,
 		"HighIndicator": highIndicator,
 		"LowIndicator":  lowIndicator,
+	})
+}
+
+func plug(c *gin.Context) {
+	c.HTML(http.StatusOK, "plug.tmpl", gin.H{
+		"EntryJS": entryJS,
+		"Data":    "Heloo",
 	})
 }

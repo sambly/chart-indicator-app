@@ -3,7 +3,6 @@ module main
 go 1.22.5
 
 require (
-	github.com/foolin/gin-template v0.0.0-20190415034731-41efedfb393b
 	github.com/gin-gonic/gin v1.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/markcheno/go-quote v0.0.0-20240929161446-cb6fe2a2e6f8

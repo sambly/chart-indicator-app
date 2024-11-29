@@ -1,5 +1,5 @@
 <div style="margin-top: 20px; margin-left: 20px;">
-    <p><strong>Индикатор SMA (Simple Moving Average)</p>
+    <p><strong>Plug</p>
     <div id="chart" style="margin-top: 20px;"></div>
 </div>
 
@@ -7,9 +7,8 @@
     import {{ .EntryJS }};
 
     // Данные, переданные из Go
-    const chartData = {{ .ChartData }};
-    const sma = {{ .SMAIndicator }};
+    const data = {{ .Data }};
     
     // Вызов функции с аргументами
-    buildSMA(chartData,sma);
+    buidPlug(data);
 </script>

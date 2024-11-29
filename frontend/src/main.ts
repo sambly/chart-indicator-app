@@ -1,6 +1,11 @@
-import { createChart,CrosshairMode,CandlestickData,LineData,SeriesMarker} from 'lightweight-charts';
-import {Quote,Indicator} from './types';
-import { convTime } from './help.js';
+import { createChart,CrosshairMode,CandlestickData,LineData} from 'lightweight-charts';
+import {Quote,Indicator} from './types.d';
+import { convTime } from './help';
+
+
+window.buildSMA = buildSMA;
+window.buildExtremum = buildExtremum;
+window.buidPlug = buidPlug;
 
 
 export function buildSMA(quote: Quote,sma:Indicator[]): void {
@@ -136,6 +141,8 @@ export function buildExtremum(quote: Quote,highIndicator:Indicator[],lowIndicato
 
 }
 
-
+export function buidPlug(data:any): void {
+	console.log(data);
+}
 
 

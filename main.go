@@ -51,10 +51,7 @@ func main() {
 	r.GET("/", home)
 	r.GET("/sma", getSMA)
 	r.GET("/extremum", getHighLow)
-
-	fmt.Println()
-	fmt.Println(entryJS)
-	fmt.Println()
+	r.GET("/plug", plug)
 
 	r.Run(":8080")
 

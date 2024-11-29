@@ -1,21 +1,20 @@
 {
-  "name": "chart-indicator",
+  "name": "fff",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "lightweight-charts": "^4.2.1",
     "jquery": "^3.7.1"
   },
-
   "devDependencies": {
-    "vite": "^5.4.10",
-    "typescript": "^5.0.0",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.1",
     "@types/jquery": "^3.5.5" 
   }
 }
