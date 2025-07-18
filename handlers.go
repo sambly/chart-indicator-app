@@ -21,7 +21,7 @@ func home(c *gin.Context) {
 
 func getSMA(c *gin.Context) {
 
-	q, err := quote.NewQuoteFromYahoo("BTC-USD", "2023-01-01", "2023-12-31", quote.Daily, true)
+	q, err := quote.NewQuoteFromCoinbase("BTC-USD", "2023-01-01", "2023-12-31", quote.Daily)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -43,7 +43,7 @@ func getSMA(c *gin.Context) {
 
 func getHighLow(c *gin.Context) {
 
-	q, err := quote.NewQuoteFromYahoo("BTC-USD", "2023-01-01", "2023-12-31", quote.Daily, true)
+	q, err := quote.NewQuoteFromCoinbase("BTC-USD", "2023-01-01", "2023-12-31", quote.Daily)
 	if err != nil {
 		fmt.Println(err)
 		return
