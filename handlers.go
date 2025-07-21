@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"main/indicator/trendSniper"
 	"net/http"
 	"time"
 
@@ -72,5 +73,22 @@ func plug(c *gin.Context) {
 	c.HTML(http.StatusOK, "plug.tmpl", gin.H{
 		"EntryJS": entryJS,
 		"Data":    "Heloo",
+	})
+}
+
+func getTrendSniper(c *gin.Context) {
+	q, err := quote.NewQuoteFromCoinbase("BTC-USD", "2023-01-01", "2023-12-31", quote.Daily)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	ts := trendSniper.NewIndicator()
+	ts.RMITrendSniper(q)
+	c.HTML(http.StatusOK, "sniper.tmpl", gin.H{
+		"EntryJS":          entryJS,
+		"ChartData":        q,
+		"SignalBuyPoints":  ts.SignalBuyPoints,
+		"SignalSellPoints": ts.SignalSellPoints,
 	})
 }

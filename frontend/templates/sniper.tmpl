@@ -1,0 +1,16 @@
+<div style="margin-top: 20px; margin-left: 20px;">
+    <p><strong>Индикатор SniperTrend</p>
+    <div id="chart" style="margin-top: 20px;"></div>
+</div>
+
+<script type="module">
+    import {{ .EntryJS }};
+
+    // Данные, переданные из Go
+    const chartData = {{ .ChartData }};
+    const signalBuyPoints = {{ .SignalBuyPoints }};
+    const signalSellPoints = {{ .SignalSellPoints }};
+    
+    // Вызов функции с аргументами
+    buildSniper(chartData,signalBuyPoints,signalSellPoints);
+</script>

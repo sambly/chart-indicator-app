@@ -52,6 +52,7 @@ func main() {
 	r.GET("/sma", getSMA)
 	r.GET("/extremum", getHighLow)
 	r.GET("/plug", plug)
+	r.GET("/sniper", getTrendSniper)
 
 	r.Run(":8080")
 
