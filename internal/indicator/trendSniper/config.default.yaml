@@ -1,0 +1,32 @@
+# rsi_length: 14
+# ema_fast_length: 12
+# ema_slow_length: 26
+# atr_length: 14
+# atr_sma_length: 20
+# volume_sma_length: 20
+
+# rsi_mfi_buy_level: 30.0
+# rsi_mfi_exit_level: 70.0
+# ema_min_delta: 0.05
+# atr_multiplier: 1.5
+# buy_volume_factor: 1.2
+# sell_volume_factor: 1.2
+
+# deduplicate_signals: true
+
+
+rsi_length: 14
+ema_fast_length: 8
+ema_slow_length: 50
+atr_length: 14
+atr_sma_length: 14
+volume_sma_length: 20
+
+rsi_mfi_buy_level: 62.0
+rsi_mfi_exit_level: 38.0
+ema_min_delta: 0.001
+atr_multiplier: 0.5
+buy_volume_factor: 1.2
+sell_volume_factor: 0.8
+
+deduplicate_signals: false

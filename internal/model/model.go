@@ -1,8 +1,8 @@
-package indicator
+package model
 
 import "time"
 
-type Indicator struct {
+type IndicatorData struct {
 	Date  time.Time `json:"date"`
 	Value float64   `json:"value"`
 }

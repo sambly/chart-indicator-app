@@ -24,3 +24,5 @@ certs/*
 # IDE
 .idea
 
+internal/indicator/**/config.yaml
+!internal/indicator/**/config.default.yaml

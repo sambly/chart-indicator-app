@@ -1,7 +1,7 @@
 import { createChart,CrosshairMode,CandlestickData,LineData} from 'lightweight-charts';
 import {Quote,Indicator} from './types.d';
 import { convTime } from './help';
-
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 window.buildSMA = buildSMA;
 window.buildExtremum = buildExtremum;

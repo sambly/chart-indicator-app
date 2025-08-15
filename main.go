@@ -3,15 +3,21 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"main/internal/app"
+	"main/internal/indicator/extremum"
+	"main/internal/indicator/sma"
+	"main/internal/indicator/trendSniper"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
-var entryJS string
-
 func main() {
+
+	var entryJS string
+	var entryCSS string
 
 	godotenv.Load(".env")
 	mode, _ := os.LookupEnv("ENVIRONMENT")
@@ -39,6 +45,13 @@ func main() {
 			panic("Ошибка: ключ 'file' отсутствует в записи 'src/main'")
 		}
 		entryJS = "/" + entryJS
+
+		if cssFiles, ok := entry["css"].([]interface{}); ok && len(cssFiles) > 0 {
+			if firstCSS, ok := cssFiles[0].(string); ok {
+				entryCSS = "" + firstCSS
+			}
+		}
+
 	} else {
 		// Development: Используем Vite Dev Server
 		entryJS = "http://localhost:5173/src/main.ts" // Vite dev server
@@ -48,14 +61,21 @@ func main() {
 		r.Static("/assets", "./frontend/dist/assets")
 	}
 
-	r.GET("/", home)
-	r.GET("/sma", getSMA)
-	r.GET("/extremum", getHighLow)
-	r.GET("/plug", plug)
-	r.GET("/sniper", getTrendSniper)
+	app := app.NewApp(entryJS, entryCSS)
 
+	r.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.tmpl", gin.H{})
+	})
+	sma.New(app).Register(r)
+	extremum.New(app).Register(r)
+
+	trendSniper, err := trendSniper.New(app)
+	if err != nil {
+		panic(fmt.Sprintf("trendSniper error %v", err))
+	}
+
+	trendSniper.Register(r)
 	r.Run(":8080")
-
 }
 
 func readManifest() (map[string]interface{}, error) {
