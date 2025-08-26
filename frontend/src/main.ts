@@ -206,14 +206,18 @@ export function buildSniper(quote: Quote,signalBuyPoints:Indicator[],signalSellP
 	for (let item of signalBuyPoints) {
 		if (item.value!=0){
 			lineSeriesDataHigh.push({time: convTime(item.date),value:item.value});
-			markersChartHigh.push({ time: convTime(item.date), position: 'inBar', color: '#008000', shape: 'circle' });  
+			// markersChartHigh.push({ time: convTime(item.date), position: 'inBar', color: '#008000', shape: 'circle' }); 
+			// buy
+			markersChartHigh.push({ time: convTime(item.date), position: 'belowBar', color: '#008000', shape: 'arrowUp' }); 
 		}  
 	}
 
 	for (let item of signalSellPoints) {
 		if (item.value!=0){
 			lineSeriesDataLow.push({time: convTime(item.date),value:item.value});
-			markersChartLow.push({ time: convTime(item.date), position: 'inBar', color: '#FF0000', shape: 'circle' });  
+			markersChartLow.push({ time: convTime(item.date), position: 'inBar', color: '#FF0000', shape: 'circle' }); 
+			// sell
+			markersChartLow.push({ time: convTime(item.date), position: 'aboveBar', color: '#FF0000', shape: 'arrowDown' }); 
 		}  
 	}
 

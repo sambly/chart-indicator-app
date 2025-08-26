@@ -1,0 +1,7 @@
+rsi_length: 14
+ema_slow_length: 51
+
+rsi_buy_level: 30
+rsi_exit_level: 70
+
+min_bars_between_trades : 1

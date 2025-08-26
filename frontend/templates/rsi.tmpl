@@ -1,0 +1,157 @@
+<link rel="stylesheet" href="{{ .EntryCSS }}">
+
+<div class="container mt-2">
+    <div class="mb-2">
+        <a href="/" class="btn btn-primary btn-sm">На главную</a>
+    </div>
+
+    <div class="card mb-2">
+        <div class="card-header py-1">
+            <h5 class="card-title mb-0">Индикатор RSI + EMA slow</h5>
+        </div>
+        <div class="card-body p-2 d-flex flex-column">
+            <!-- Основные формы в row -->
+            <div class="row g-1 mb-2"> <!-- Убрал align-items-end -->
+                <!-- Форма 1: Основные параметры -->
+                <div class="col-md-4 d-flex flex-column">
+                    <form method="GET" action="/rsi" id="mainForm" class="border rounded p-1 flex-grow-1" style="height: 250px; overflow-y: auto;">
+                        <h6 class="mb-1">Основные параметры</h6>
+                        <input type="hidden" name="form_type" value="update">
+                        
+                        <div class="mb-1">
+                            <label for="symbol" class="form-label small mb-0">Тикер:</label>
+                            <input type="text" class="form-control form-control-sm" id="symbol" name="symbol" value="{{ or .FormValues.symbol "BTC-USD" }}">
+                        </div>
+                        
+                        <div class="mb-1">
+                            <label for="start_date" class="form-label small mb-0">Начальная дата:</label>
+                            <input type="date" class="form-control form-control-sm" id="start_date" name="start_date" value="{{ or .FormValues.start_date "2025-01-01" }}">
+                        </div>
+                        
+                        <div class="mb-1">
+                            <label for="end_date" class="form-label small mb-0">Конечная дата:</label>
+                            <input type="date" class="form-control form-control-sm" id="end_date" name="end_date" value="{{ or .FormValues.end_date "2025-07-30" }}">
+                        </div>
+                        
+                        <div class="mb-1">
+                            <label for="interval" class="form-label small mb-0">Интервал:</label>
+                            <select class="form-select form-select-sm" id="interval" name="interval">
+                                <option value="60" {{ if eq (or .FormValues.interval "3600") "60" }}selected{{ end }}>1 минута</option>
+                                <option value="300" {{ if eq (or .FormValues.interval "3600") "300" }}selected{{ end }}>5 минут</option>
+                                <option value="900" {{ if eq (or .FormValues.interval "3600") "900" }}selected{{ end }}>15 минут</option>
+                                <option value="3600" {{ if eq (or .FormValues.interval "3600") "3600" }}selected{{ end }}>1 час</option>
+                                <option value="d" {{ if eq (or .FormValues.interval "3600") "d" }}selected{{ end }}>День</option>
+                            </select>
+                        </div>
+                    </form>
+                    <button type="submit" form="mainForm" class="btn btn-primary btn-sm w-100 mt-1">Обновить</button>
+                </div>
+
+                <div class="col-md-4 d-flex flex-column">
+                    <form method="GET" action="/rsi" id="configForm" class="border rounded p-1 flex-grow-1" style="height: 250px; overflow-y: auto;">
+                        <h6 class="mb-1">Настройки индикатора</h6>
+                        <input type="hidden" name="form_type" value="config">
+                        <div id="configFields">
+                        </div>
+                    </form>
+                    <a href="/rsi?form_type=get_default_config" class="btn btn-primary btn-sm w-100 mt-1">Настройки по умолчанию</a>
+                    <button type="submit" form="configForm" class="btn btn-primary btn-sm w-100 mt-1">Применить настройки</button>
+                    <a href="/rsi?form_type=save" class="btn btn-primary btn-sm w-100 mt-1">Сохранить настройки</a>
+                </div>
+
+
+                <div class="col-md-2 d-flex flex-column">
+                    <div class="border rounded p-1 flex-grow-1" style="height: 250px; overflow-y: auto;">
+                        <h6 class="mb-1">Результаты</h6>
+                        {{ if .CurrentOptimization }}
+                            <table class="table table-sm table-bordered mb-2">
+                                <tr><td>Profit</td><td>{{ printf "%.2f" .CurrentOptimization.Profit }}</td></tr>
+                                <tr><td>Trades</td><td>{{ .CurrentOptimization.Trades }}</td></tr>
+                                <tr><td>WinRate</td><td>{{ printf "%.2f%%" .CurrentOptimization.WinRatePercent }}</td></tr>
+                                <tr><td>Drawdown</td><td>{{ printf "%.2f" .CurrentOptimization.Drawdown }}</td></tr>
+                                <tr><td>CountBuy</td><td>{{ .CurrentOptimization.CountSignalBuy }}</td></tr>
+                                <tr><td>CountSell</td><td>{{ .CurrentOptimization.CountSignalSell }}</td></tr>    
+                            </table>
+                        {{ else }}
+                            <p class="text-muted small">ХЗ</p>
+                        {{ end }}
+                    </div>
+                    <form method="GET" action="/rsi" id="currentOptimize">
+                        <input type="hidden" name="form_type" value="currentOptimize">
+                        <button type="submit" form="currentOptimize" class="btn btn-primary btn-sm w-100 mt-1">
+                            Рассчитать
+                        </button>
+                    </form>
+                </div>
+
+                <div class="col-md-2 d-flex flex-column">
+                    <div class="border rounded p-1 flex-grow-1" style="height: 250px; overflow-y: auto;">
+                        <h6 class="mb-1">Результаты оптимизации</h6>
+                        {{ if .Optimization }}
+                            <table class="table table-sm table-bordered mb-2">
+                                <tr><td>Profit</td><td>{{ printf "%.2f" .Optimization.Profit }}</td></tr>
+                                <tr><td>Trades</td><td>{{ .Optimization.Trades }}</td></tr>
+                                <tr><td>WinRate</td><td>{{ printf "%.2f%%" .Optimization.WinRatePercent }}</td></tr>
+                                <tr><td>Drawdown</td><td>{{ printf "%.2f" .Optimization.Drawdown }}</td></tr>
+                                <tr><td>CountBuy</td><td>{{ .Optimization.CountSignalBuy }}</td></tr>
+                                <tr><td>CountSell</td><td>{{ .Optimization.CountSignalSell }}</td></tr>                                
+                            </table>
+                        {{ else }}
+                            <p class="text-muted small">Оптимизация ещё не запускалась</p>
+                        {{ end }}
+                    </div>
+                    <form method="GET" action="/rsi" id="optimizeUpdateForm">
+                        <input type="hidden" name="form_type" value="optimize">
+                        <button type="submit" form="optimizeUpdateForm" class="btn btn-primary btn-sm w-100 mt-1">
+                            Обновить результаты
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+
+            <!-- График -->
+            <div id="chart" class="flex-grow-1" style="min-height: 400px; width: 100%;"></div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import {{ .EntryJS }};
+
+    const sniperConfig = {{ .Config }};
+    const chartData = {{ .ChartData }};
+    const signalBuyPoints = {{ .SignalBuyPoints }};
+    const signalSellPoints = {{ .SignalSellPoints }};
+
+    const config = JSON.parse(sniperConfig);
+    
+    // Генерация полей формы
+    function generateConfigFields() {
+        const container = document.getElementById('configFields');
+        if (!container) return;
+        
+        for (const [key, value] of Object.entries(config)) {
+            const div = document.createElement('div');
+            div.className = 'mb-1';
+            div.innerHTML = `
+                <label class="form-label small mb-0">${key}:</label>
+                <input type="number" class="form-control form-control-sm" name="${key}" value="${value}" step="0.01">
+            `;
+            container.appendChild(div);
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        generateConfigFields();
+        
+        if (window.buildSniper && chartData) {
+            buildSniper(chartData, signalBuyPoints, signalSellPoints, sniperConfig);
+        }
+
+        // Очищаем URL сразу после загрузки
+        if (window.location.search) {
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    });
+</script>

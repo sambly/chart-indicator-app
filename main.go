@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"main/internal/app"
 	"main/internal/indicator/extremum"
+	indicatorrsi "main/internal/indicator/rsi"
 	"main/internal/indicator/sma"
 	"main/internal/indicator/trendSniper"
 	"net/http"
@@ -74,7 +75,13 @@ func main() {
 		panic(fmt.Sprintf("trendSniper error %v", err))
 	}
 
+	trendRSI, err := indicatorrsi.New(app)
+	if err != nil {
+		panic(fmt.Sprintf("trendSniper error %v", err))
+	}
+
 	trendSniper.Register(r)
+	trendRSI.Register(r)
 	r.Run(":8080")
 }
 
