@@ -14,14 +14,14 @@ var (
 
 type Config struct {
 	// Индикаторы
-	RSILength     int `yaml:"rsi_length" form:"RSILength"`          // длина RSI
-	EMASlowLength int `yaml:"ema_slow_length" form:"EMASlowLength"` // длина медленной EMA
+	RSILength     int `yaml:"rsi_length" json:"rsiLength"`          // длина RSI
+	EMASlowLength int `yaml:"ema_slow_length" json:"emaSlowLength"` // длина медленной EMA
 
 	// Уровни RSI
-	RSIBuyLevel  float64 `yaml:"rsi_buy_level" form:"RSIBuyLevel"`   // уровень входа
-	RSIExitLevel float64 `yaml:"rsi_exit_level" form:"RSIExitLevel"` // уровень выхода
+	RSIBuyLevel  float64 `yaml:"rsi_buy_level" json:"rsiBuyLevel"`   // уровень входа
+	RSIExitLevel float64 `yaml:"rsi_exit_level" json:"rsiExitLevel"` // уровень выхода
 
-	MinBarsBetweenTrades int `yaml:"min_bars_between_trades" form:"MinBarsBetweenTrades"` // минимальное количество баров
+	MinBarsBetweenTrades int `yaml:"min_bars_between_trades" json:"minBarsBetweenTrades"` // минимальное количество баров
 }
 
 func NewConfig() (*Config, error) {

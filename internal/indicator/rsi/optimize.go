@@ -10,15 +10,15 @@ import (
 )
 
 type OptimizationResult struct {
-	Config          *Config
-	Profit          float64
-	Trades          int
-	WinRate         float64
-	Drawdown        float64
-	WinRatePercent  float64
-	CountSignalBuy  int
-	CountSignalSell int
-	EquityCurve     []float64
+	Config          *Config   `json:"-"`
+	Profit          float64   `json:"profit"`
+	Trades          int       `json:"trades"`
+	WinRate         float64   `json:"winRate"`
+	Drawdown        float64   `json:"drawdown"`
+	WinRatePercent  float64   `json:"winRatePercent"`
+	CountSignalBuy  int       `json:"countSignalBuy"`
+	CountSignalSell int       `json:"countSignalSell"`
+	EquityCurve     []float64 `json:"-"`
 }
 
 func (o OptimizationResult) String() string {

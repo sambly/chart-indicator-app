@@ -1,8 +1,6 @@
 package indicatorrsi
 
 import (
-	"encoding/json"
-	"fmt"
 	"main/internal/app"
 	"main/internal/utils"
 	"net/http"
@@ -30,110 +28,157 @@ func New(app *app.App) (*Handler, error) {
 }
 
 func (h *Handler) Register(router gin.IRouter) {
-	router.GET("/rsi", h.GetTrendRSI)
+	router.GET("rsi/default-data", h.GetTrendRSIDefault)
+	router.POST("rsi/update", h.UpdateTrendRSIData)
+	router.POST("rsi/apply-config", h.ApplyRSIConfig)
+	router.POST("rsi/save-config", h.SaveRSIConfig)
+	router.GET("rsi/default-config", h.GetRSIDefaultConfig)
+	router.POST("rsi/optimize", h.OptimizeRSIStrategy)
+	router.POST("rsi/evaluate", h.EvaluateRSIStrategyHandler)
 }
 
-func (h *Handler) GetTrendRSI(c *gin.Context) {
+func (h *Handler) GetTrendRSIDefault(c *gin.Context) {
 
 	a := h.app
-	symbol := c.DefaultQuery("symbol", a.Symbol)
-	startDate := c.DefaultQuery("start_date", a.StartDate)
-	endDate := c.DefaultQuery("end_date", a.EndDate)
-	interval := c.DefaultQuery("interval", string(a.Interval))
-	intervalQuote := utils.ParsePeriod(interval)
+	intervalQuote := utils.ParsePeriod(string(a.Interval))
+	c.JSON(http.StatusOK, gin.H{
+		"symbol":           a.Symbol,
+		"startDate":        a.StartDate,
+		"endDate":          a.EndDate,
+		"interval":         intervalQuote,
+		"config":           h.rsi.Config,
+		"currentOpti":      h.currentOpti,
+		"optimization":     h.optimization,
+		"chartData":        a.Quote[a.Symbol][intervalQuote],
+		"signalBuyPoints":  h.rsi.SignalBuyPoints,
+		"signalSellPoints": h.rsi.SignalSellPoints,
+	})
+}
 
-	if err := c.Bind(h.rsi.Config); err != nil {
+func (h *Handler) UpdateTrendRSIData(c *gin.Context) {
+	a := h.app
+
+	if err := c.ShouldBindJSON(&a); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	a.Interval = utils.ParsePeriod(a.IntervalString)
 
-	formType := c.Query("form_type")
-	switch formType {
-
-	case "update":
-
-		a.Symbol = symbol
-		a.StartDate = startDate
-		a.EndDate = endDate
-		a.Interval = intervalQuote
-
-		q, err := quote.NewQuoteFromCoinbase(symbol, startDate, endDate, intervalQuote)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		if a.Quote[symbol] == nil {
-			a.Quote[symbol] = make(map[quote.Period]quote.Quote)
-		}
-		a.Quote[symbol][intervalQuote] = q
-		h.rsi.Execute(q)
-
-	case "config":
-		h.rsi.Execute(a.Quote[symbol][intervalQuote])
-	case "save":
-		if err := h.rsi.Config.SaveConfig(); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-	case "get_default_config":
-
-		cfg, err := NewConfig()
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		h.rsi.Config = cfg
-
-	case "optimize":
-		optimizationResult := OptimizeRSIStrategy(a.Quote[symbol][intervalQuote])
-		h.rsi.Config = optimizationResult.Config
-		h.optimization = optimizationResult
-		h.rsi.Execute(a.Quote[symbol][intervalQuote])
-
-	case "currentOptimize":
-		optimizationResult := EvaluateRSIStrategy(h.rsi, a.Quote[symbol][intervalQuote])
-		h.currentOpti = optimizationResult
-
-	default:
-
-		if a.Quote[symbol] == nil {
-			a.Quote[symbol] = make(map[quote.Period]quote.Quote)
-		}
-
-		// Первая загрузка страницы или просто обновление
-		if _, exists := a.Quote[symbol][intervalQuote]; !exists {
-			q, err := quote.NewQuoteFromCoinbase(symbol, startDate, endDate, intervalQuote)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-
-			a.Quote[symbol][intervalQuote] = q
-			h.rsi.Execute(q)
-		}
-	}
-
-	configJSON, err := json.Marshal(h.rsi.Config)
+	// Получаем новые котировки
+	q, err := quote.NewQuoteFromCoinbase(a.Symbol, a.StartDate, a.EndDate, a.Interval)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.HTML(http.StatusOK, "rsi.tmpl", gin.H{
-		"EntryJS":             a.EntryJS,
-		"EntryCSS":            a.EntryCSS,
-		"ChartData":           a.Quote[symbol][intervalQuote],
-		"SignalBuyPoints":     h.rsi.SignalBuyPoints,
-		"SignalSellPoints":    h.rsi.SignalSellPoints,
-		"Config":              string(configJSON),
-		"CurrentOptimization": h.currentOpti,
-		"Optimization":        h.optimization,
-		"FormValues": gin.H{
-			"symbol":     symbol,
-			"start_date": startDate,
-			"end_date":   endDate,
-			"interval":   interval,
-		},
+	if a.Quote[a.Symbol] == nil {
+		a.Quote[a.Symbol] = make(map[quote.Period]quote.Quote)
+	}
+	a.Quote[a.Symbol][a.Interval] = q
+
+	// Выполняем RSI
+	h.rsi.Execute(q)
+
+	c.JSON(http.StatusOK, gin.H{
+		"symbol":           a.Symbol,
+		"startDate":        a.StartDate,
+		"endDate":          a.EndDate,
+		"interval":         a.Interval,
+		"config":           h.rsi.Config,
+		"currentOpti":      h.currentOpti,
+		"optimization":     h.optimization,
+		"chartData":        a.Quote[a.Symbol][a.Interval],
+		"signalBuyPoints":  h.rsi.SignalBuyPoints,
+		"signalSellPoints": h.rsi.SignalSellPoints,
+	})
+}
+
+func (h *Handler) ApplyRSIConfig(c *gin.Context) {
+	a := h.app
+
+	if err := c.ShouldBindJSON(&h.rsi.Config); err != nil {
+		println(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	q, ok := a.Quote[a.Symbol][a.Interval]
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no quote data for symbol/interval"})
+		return
+	}
+
+	h.rsi.Execute(q)
+
+	c.JSON(http.StatusOK, gin.H{
+		"chartData":        a.Quote[a.Symbol][a.Interval],
+		"signalBuyPoints":  h.rsi.SignalBuyPoints,
+		"signalSellPoints": h.rsi.SignalSellPoints,
+	})
+}
+
+func (h *Handler) SaveRSIConfig(c *gin.Context) {
+	if err := c.ShouldBindJSON(&h.rsi.Config); err != nil {
+		println(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.rsi.Config.SaveConfig(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{})
+}
+
+func (h *Handler) GetRSIDefaultConfig(c *gin.Context) {
+	cfg, err := NewConfig()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	h.rsi.Config = cfg
+
+	c.JSON(http.StatusOK, gin.H{
+		"config": h.rsi.Config,
+	})
+}
+
+func (h *Handler) OptimizeRSIStrategy(c *gin.Context) {
+	a := h.app
+
+	q, ok := a.Quote[a.Symbol][a.Interval]
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no quote data for symbol/interval"})
+		return
+	}
+
+	optimizationResult := OptimizeRSIStrategy(q)
+	h.rsi.Config = optimizationResult.Config
+	h.optimization = optimizationResult
+	h.rsi.Execute(q)
+
+	c.JSON(http.StatusOK, gin.H{
+		"config":           h.rsi.Config,
+		"optimization":     optimizationResult,
+		"chartData":        a.Quote[a.Symbol][a.Interval],
+		"signalBuyPoints":  h.rsi.SignalBuyPoints,
+		"signalSellPoints": h.rsi.SignalSellPoints,
+	})
+}
+
+func (h *Handler) EvaluateRSIStrategyHandler(c *gin.Context) {
+	a := h.app
+
+	q, ok := a.Quote[a.Symbol][a.Interval]
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no quote data for symbol/interval"})
+		return
+	}
+
+	optimizationResult := EvaluateRSIStrategy(h.rsi, q)
+	h.currentOpti = optimizationResult
+
+	c.JSON(http.StatusOK, gin.H{
+		"currentOpti": h.currentOpti,
 	})
 }

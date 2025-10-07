@@ -19,19 +19,16 @@ type Indicator struct {
 }
 
 type App struct {
-	EntryJS   string
-	EntryCSS  string
-	Symbol    string
-	StartDate string
-	EndDate   string
-	Interval  quote.Period
-	Quote     map[string]map[quote.Period]quote.Quote
+	Symbol         string                                  `json:"symbol"`
+	StartDate      string                                  `json:"start_date"`
+	EndDate        string                                  `json:"end_date"`
+	IntervalString string                                  `json:"interval"`
+	Interval       quote.Period                            `json:"-"`
+	Quote          map[string]map[quote.Period]quote.Quote `json:"-"`
 }
 
-func NewApp(entryJS, entryCSS string) *App {
+func NewApp() *App {
 	return &App{
-		EntryJS:   entryJS,
-		EntryCSS:  entryCSS,
 		Quote:     make(map[string]map[quote.Period]quote.Quote),
 		Symbol:    SymbolDefault,
 		StartDate: StartDateDefault,
