@@ -64,13 +64,11 @@ func (h *Handler) UpdateTrendRSIData(c *gin.Context) {
 	}
 	a.Interval = utils.ParsePeriod(a.IntervalString)
 
-	// Получаем новые котировки
-	q, err := quote.NewQuoteFromCoinbase(a.Symbol, a.StartDate, a.EndDate, a.Interval)
+	q, err := a.Feeder.GetQuote(a.Symbol, a.StartDate, a.EndDate, a.Interval)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	if a.Quote[a.Symbol] == nil {
 		a.Quote[a.Symbol] = make(map[quote.Period]quote.Quote)
 	}

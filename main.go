@@ -4,14 +4,25 @@ import (
 	"fmt"
 	"log"
 	"main/internal/app"
+	"main/internal/feeder"
 	indicatorrsi "main/internal/indicator/rsi"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+
+	if err := godotenv.Load(); err != nil {
+		if !os.IsNotExist(err) {
+			panic(fmt.Sprintf("Error loading .env file: %v", err))
+		}
+		log.Println("No .env file found, using system environment variables")
+	}
 
 	r := gin.Default()
 
@@ -31,11 +42,26 @@ func main() {
 		c.File("./frontend/dist/index.html")
 	})
 
-	app := app.NewApp()
+	feederType := strings.ToLower(os.Getenv("FEEDER"))
+	if feederType == "" {
+		feederType = "api"
+	}
+
+	var f feeder.Feeder
+
+	if feederType == "api" {
+		f = feeder.NewFeederApiCoinbase()
+	} else if feederType == "json" {
+		f = feeder.NewFeederJSONFile()
+	} else {
+		log.Fatalf("Unknown feeder type: %s", feederType)
+	}
+
+	app := app.NewApp(f)
 
 	trendRSI, err := indicatorrsi.New(app)
 	if err != nil {
-		panic(fmt.Sprintf("trendSniper error %v", err))
+		panic(fmt.Sprintf("trendRSI error %v", err))
 	}
 	trendRSI.Register(r)
 

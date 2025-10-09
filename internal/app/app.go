@@ -1,6 +1,7 @@
 package app
 
 import (
+	"main/internal/feeder"
 	"time"
 
 	"github.com/markcheno/go-quote"
@@ -25,14 +26,16 @@ type App struct {
 	IntervalString string                                  `json:"interval"`
 	Interval       quote.Period                            `json:"-"`
 	Quote          map[string]map[quote.Period]quote.Quote `json:"-"`
+	Feeder         feeder.Feeder
 }
 
-func NewApp() *App {
+func NewApp(feeder feeder.Feeder) *App {
 	return &App{
 		Quote:     make(map[string]map[quote.Period]quote.Quote),
 		Symbol:    SymbolDefault,
 		StartDate: StartDateDefault,
 		EndDate:   EndDateDefault,
 		Interval:  IntervalDefault,
+		Feeder:    feeder,
 	}
 }

@@ -1,14 +1,15 @@
 module main
 
-go 1.23.0
+go 1.23.2
 
 toolchain go1.24.6
 
 require (
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.10.1
-	github.com/markcheno/go-quote v0.0.0-20250404014651-c94d8a57545f
-	github.com/markcheno/go-talib v0.0.0-20190307022042-cd53a9264d70
+	github.com/joho/godotenv v1.5.1
+	github.com/markcheno/go-quote v0.0.0-20251007225555-e8466a237665
+	github.com/markcheno/go-talib v0.0.0-20250114000313-ec55a20c902f
 	gopkg.in/yaml.v3 v3.0.1
 )
 
