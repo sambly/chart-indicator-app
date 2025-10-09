@@ -32,10 +32,15 @@ func NewRSI() (*RSI, error) {
 	}, nil
 }
 
-func (s *RSI) Execute(candles quote.Quote) (signalBuyOnLast, signalSellOnLast bool) {
+func (s *RSI) Execute(candles quote.Quote, verbose bool) (signalBuyOnLast, signalSellOnLast bool) {
 	// --- Очистка сигналов ---
 	s.SignalBuyPoints = s.SignalBuyPoints[:0]
 	s.SignalSellPoints = s.SignalSellPoints[:0]
+
+	if len(candles.Close) == 0 {
+		fmt.Println("[RSI] candles.Close = 0")
+		return false, false
+	}
 
 	closes := candles.Close
 	times := candles.Date
@@ -58,11 +63,19 @@ func (s *RSI) Execute(candles quote.Quote) (signalBuyOnLast, signalSellOnLast bo
 	s.EMAValues = emaSlow
 
 	startIndex := maxInt(s.RSILength, s.EMASlowLength, 20)
-	lastSignalIndex := -9999
-	minBarsBetweenTrades := s.MinBarsBetweenTrades
+	lastBuyIndex := -9999
+	lastSellIndex := -9999
 
 	for i := startIndex; i < n; i++ {
-		if math.IsNaN(rsi[i]) || math.IsNaN(emaSlow[i]) || math.IsNaN(emaFast[i]) {
+		if i >= len(rsi) || i >= len(emaSlow) || i >= len(emaFast) {
+			continue
+		}
+		if math.IsNaN(rsi[i]) || math.IsNaN(rsi[i-1]) ||
+			math.IsNaN(emaSlow[i]) || math.IsNaN(emaSlow[i-1]) ||
+			math.IsNaN(emaFast[i]) {
+			continue
+		}
+		if math.IsInf(rsi[i], 0) || math.IsInf(emaSlow[i], 0) || math.IsInf(emaFast[i], 0) {
 			continue
 		}
 
@@ -77,15 +90,15 @@ func (s *RSI) Execute(candles quote.Quote) (signalBuyOnLast, signalSellOnLast bo
 		dateStr := times[i].Format("2006-01-02 15:04")
 
 		// --- BUY CONDITIONS ---
-		buyCond1 := prevClose < prevEMA && currClose > currEMA
-		buyCond2 := currRSI < s.RSIBuyLevel || (prevRSI < s.RSIBuyLevel && currRSI > prevRSI)
-		buyCond3 := currEMAFast > currEMA
-		buyCond4 := i-lastSignalIndex >= minBarsBetweenTrades
+		buyCond1 := prevClose < prevEMA && currClose > currEMA         // пересечение ценой медленной EMA снизу вверх (трендовый сигнал)
+		buyCond2 := prevRSI < s.RSIBuyLevel && currRSI > s.RSIBuyLevel // RSI пересекает уровень покупки снизу вверх → фильтр импульса (моментум)
+		buyCond3 := currEMAFast > currEMA                              // быстрая EMA выше медленной
+		buyCond4 := i-lastBuyIndex >= s.MinBarsBetweenTrades           //минимальное расстояние между покупками
 
 		buySignal := buyCond1 && buyCond2 && buyCond3 && buyCond4
 
 		if buySignal {
-			lastSignalIndex = i
+			lastBuyIndex = i
 			s.SignalBuyPoints = append(s.SignalBuyPoints, model.IndicatorData{
 				Date:  times[i],
 				Value: currClose,
@@ -94,16 +107,19 @@ func (s *RSI) Execute(candles quote.Quote) (signalBuyOnLast, signalSellOnLast bo
 				signalBuyOnLast = true
 			}
 
-			fmt.Printf("[BUY] %s | Close=%.2f | RSI=%.1f | EMA=%.2f | FastEMA=%.2f\n", dateStr, currClose, currRSI, currEMA, currEMAFast)
-			fmt.Printf("      cond1(cross up EMA)=%v cond2(RSI zone)=%v cond3(Fast>Slow)=%v cond4(cooldown)=%v\n",
-				buyCond1, buyCond2, buyCond3, buyCond4)
+			if verbose {
+				fmt.Printf("[BUY] %s | Close=%.2f | RSI=%.1f | EMA=%.2f | FastEMA=%.2f\n", dateStr, currClose, currRSI, currEMA, currEMAFast)
+				fmt.Printf("      cond1(cross up EMA)=%v cond2(RSI zone)=%v cond3(Fast>Slow)=%v cond4(cooldown)=%v\n",
+					buyCond1, buyCond2, buyCond3, buyCond4)
+			}
 			continue
 		}
 
 		// --- SELL CONDITIONS ---
-		sellCond1 := prevClose > prevEMA && currClose < currEMA
-		sellCond2 := currRSI > s.RSIExitLevel && currRSI < prevRSI
-		sellCond3 := i-lastSignalIndex >= minBarsBetweenTrades
+		sellCond1 := prevClose > prevEMA && currClose < currEMA           // цена пересекла EMA сверху вниз → сигнал разворота тренда
+		sellCond2 := prevRSI > s.RSIExitLevel && currRSI < s.RSIExitLevel //RSI пересёк уровень выхода сверху вниз → сигнал ослабления импульса
+		sellCond3 := i-lastSellIndex >= s.MinBarsBetweenTrades            //защита от слишком частых сигналов
+		sellCond4 := currEMAFast < currEMA                                // быстрая EMA ниже медленной
 
 		trueCount := 0
 		if sellCond1 {
@@ -115,11 +131,14 @@ func (s *RSI) Execute(candles quote.Quote) (signalBuyOnLast, signalSellOnLast bo
 		if sellCond3 {
 			trueCount++
 		}
+		if sellCond4 {
+			trueCount++
+		}
 
-		sellSignal := trueCount >= 2
+		sellSignal := trueCount >= s.CountSellSignals
 
 		if sellSignal {
-			lastSignalIndex = i
+			lastSellIndex = i
 			s.SignalSellPoints = append(s.SignalSellPoints, model.IndicatorData{
 				Date:  times[i],
 				Value: currClose,
@@ -128,28 +147,15 @@ func (s *RSI) Execute(candles quote.Quote) (signalBuyOnLast, signalSellOnLast bo
 				signalSellOnLast = true
 			}
 
-			fmt.Printf("[SELL] %s | Close=%.2f | RSI=%.1f | EMA=%.2f | FastEMA=%.2f\n", dateStr, currClose, currRSI, currEMA, currEMAFast)
-			fmt.Printf("       cond1(cross down EMA)=%v cond2(RSI down)=%v cond3(cooldown)=%v  -> matched=%d\n",
-				sellCond1, sellCond2, sellCond3, trueCount)
+			if verbose {
+				fmt.Printf("[SELL] %s | Close=%.2f | RSI=%.1f | EMA=%.2f | FastEMA=%.2f\n", dateStr, currClose, currRSI, currEMA, currEMAFast)
+				fmt.Printf("       cond1(cross down EMA)=%v cond2(RSI down)=%v cond3(cooldown)=%v\n",
+					sellCond1, sellCond2, sellCond3)
+			}
 		}
 	}
 
 	return signalBuyOnLast, signalSellOnLast
-}
-
-// Дополнительные методы для анализа
-func (s *RSI) GetLastRSI() float64 {
-	if len(s.RSIValues) == 0 {
-		return 0
-	}
-	return s.RSIValues[len(s.RSIValues)-1]
-}
-
-func (s *RSI) GetLastEMA() float64 {
-	if len(s.EMAValues) == 0 {
-		return 0
-	}
-	return s.EMAValues[len(s.EMAValues)-1]
 }
 
 // --- helpers ---

@@ -51,51 +51,52 @@ func EvaluateRSIStrategy(s *RSI, candles quote.Quote) OptimizationResult {
 
 func OptimizeRSIStrategy(candles quote.Quote) OptimizationResult {
 	// Диапазоны параметров
-	ranges := map[string][2]int{
-		"RSILength":     {7, 21},
-		"EMASlowLength": {30, 200},
-	}
-	floatRanges := map[string][2]float64{
-		"RSIBuyLevel":  {20, 40},
-		"RSIExitLevel": {60, 80},
-	}
+	rsiMin, rsiMax := 7, 21
+	emaMin, emaMax := 30, 200
 
-	// Шаги
-	steps := map[string]int{
-		"RSILength":     2,
-		"EMASlowLength": 10,
-	}
-	floatSteps := map[string]float64{
-		"RSIBuyLevel":  2,
-		"RSIExitLevel": 2,
-	}
+	buyMin, buyMax, buyStep := 20.0, 40.0, 2.0
+	exitMin, exitMax, exitStep := 60.0, 80.0, 2.0
 
 	best := OptimizationResult{Profit: -math.MaxFloat64}
 
-	// Перебор параметров
-	for rsiLen := ranges["RSILength"][0]; rsiLen <= ranges["RSILength"][1]; rsiLen += steps["RSILength"] {
-		for emaSlow := ranges["EMASlowLength"][0]; emaSlow <= ranges["EMASlowLength"][1]; emaSlow += steps["EMASlowLength"] {
-			for buyLevel := floatRanges["RSIBuyLevel"][0]; buyLevel <= floatRanges["RSIBuyLevel"][1]; buyLevel += floatSteps["RSIBuyLevel"] {
-				for exitLevel := floatRanges["RSIExitLevel"][0]; exitLevel <= floatRanges["RSIExitLevel"][1]; exitLevel += floatSteps["RSIExitLevel"] {
+	// Перебор параметров (используем целочисленные шаги для float)
+	for rsiLen := rsiMin; rsiLen <= rsiMax; rsiLen += 2 {
+		for emaSlow := emaMin; emaSlow <= emaMax; emaSlow += 10 {
+			for ib := 0; ; ib++ {
+				buyLevel := buyMin + float64(ib)*buyStep
+				if buyLevel > buyMax+1e-9 {
+					break
+				}
+				for ie := 0; ; ie++ {
+					exitLevel := exitMin + float64(ie)*exitStep
+					if exitLevel > exitMax+1e-9 {
+						break
+					}
 
-					// создаём стратегию
-					strat, _ := NewRSI()
+					strat, err := NewRSI()
+					if err != nil {
+						// если не удалось создать стратегию, пропускаем
+						fmt.Println("NewRSI error:", err)
+						continue
+					}
 					strat.RSILength = rsiLen
 					strat.EMASlowLength = emaSlow
 					strat.RSIBuyLevel = buyLevel
 					strat.RSIExitLevel = exitLevel
 
-					profit, trades, winRate, drawdown, _, _, _ := backtestRSI(strat, candles, false, false)
+					profit, trades, winRate, drawdown, equity, _, _ := backtestRSI(strat, candles, false, false)
 
-					// выбираем лучшую стратегию по прибыли
 					if profit > best.Profit {
+						// скопируем Config чтобы не хранить ссылку на временный объект
+						cfgCopy := *strat.Config
 						best = OptimizationResult{
-							Config:         strat.Config,
+							Config:         &cfgCopy,
 							Profit:         profit,
 							Trades:         trades,
 							WinRate:        winRate,
 							Drawdown:       drawdown,
 							WinRatePercent: winRate * 100,
+							EquityCurve:    equity,
 						}
 					}
 				}
@@ -119,15 +120,20 @@ func backtestRSI(s *RSI, candles quote.Quote, verbose bool, closeAllAtEnd bool) 
 	maxDD float64,
 	equityCurve []float64,
 	countSignalBuy int,
-	CountSignalSell int,
+	countSignalSell int,
 ) {
+
 	var positions []*position
 	var wins int
-	var peak float64
-	var currentEquity float64
+	var peak float64 = 0.0
+	var currentEquity float64 = 0.0
 
 	// Пересчитаем сигналы по стратегии
-	s.Execute(candles)
+	s.Execute(candles, false)
+
+	// build fast lookup maps
+	buyMap := buildSignalMap(s.SignalBuyPoints)
+	sellMap := buildSignalMap(s.SignalSellPoints)
 
 	equityCurve = make([]float64, len(candles.Close))
 
@@ -139,17 +145,15 @@ func backtestRSI(s *RSI, candles quote.Quote, verbose bool, closeAllAtEnd bool) 
 	}
 
 	for i, price := range candles.Close {
-		buyNow := containsTime(s.SignalBuyPoints, candles.Date[i])
-		sellNow := containsTime(s.SignalSellPoints, candles.Date[i])
+		tKey := candles.Date[i].UnixNano()
+		buyNow := buyMap[tKey]
+		sellNow := sellMap[tKey]
 
-		// --- ВХОД (при сигнале BUY - открываем новую позицию) ---
 		if buyNow {
-			newPos := &position{
+			positions = append(positions, &position{
 				entryPrice: price,
 				entryTime:  candles.Date[i],
-			}
-			positions = append(positions, newPos)
-
+			})
 			if verbose {
 				fmt.Printf("%-20s | %-8s | %-10.2f | %-10s | %-10s | %-8s\n",
 					candles.Date[i].Format("2006-01-02 15:04:05"),
@@ -161,7 +165,6 @@ func backtestRSI(s *RSI, candles quote.Quote, verbose bool, closeAllAtEnd bool) 
 			}
 		}
 
-		// --- ВЫХОД (при сигнале SELL - закрываем ВСЕ открытые позиции) ---
 		if sellNow && len(positions) > 0 {
 			for _, pos := range positions {
 				pnl := price - pos.entryPrice
@@ -182,20 +185,19 @@ func backtestRSI(s *RSI, candles quote.Quote, verbose bool, closeAllAtEnd bool) 
 						pnl,
 						status)
 				}
-
 				trades++
 			}
 			positions = nil
 		}
 
-		// --- equity расчет ---
+		// unrealized
 		unrealized := 0.0
 		for _, pos := range positions {
 			unrealized += price - pos.entryPrice
 		}
 		equityCurve[i] = currentEquity + unrealized
 
-		// --- обновляем max drawdown ---
+		// update peak & drawdown (peak starts from 0 initial equity)
 		if equityCurve[i] > peak {
 			peak = equityCurve[i]
 		}
@@ -204,7 +206,7 @@ func backtestRSI(s *RSI, candles quote.Quote, verbose bool, closeAllAtEnd bool) 
 		}
 	}
 
-	// Закрыть все оставшиеся позиции только если closeAllAtEnd = true
+	// close remaining positions optionally
 	if closeAllAtEnd && len(positions) > 0 {
 		finalPrice := candles.Close[len(candles.Close)-1]
 		finalTime := candles.Date[len(candles.Date)-1]
@@ -212,13 +214,10 @@ func backtestRSI(s *RSI, candles quote.Quote, verbose bool, closeAllAtEnd bool) 
 		for _, pos := range positions {
 			pnl := finalPrice - pos.entryPrice
 			currentEquity += pnl
-
-			status := "LOSS"
 			if pnl > 0 {
 				wins++
-				status = "WIN"
 			}
-
+			trades++
 			if verbose {
 				fmt.Printf("%-20s | %-8s | %-10.2f | %-10.2f | %-10.2f | %-8s\n",
 					finalTime.Format("2006-01-02 15:04:05"),
@@ -226,17 +225,20 @@ func backtestRSI(s *RSI, candles quote.Quote, verbose bool, closeAllAtEnd bool) 
 					pos.entryPrice,
 					finalPrice,
 					pnl,
-					status)
+					func() string {
+						if pnl > 0 {
+							return "WIN"
+						} else {
+							return "LOSS"
+						}
+					}())
 			}
-
-			trades++
 		}
 		equityCurve[len(equityCurve)-1] = currentEquity
 	}
 
 	profit = currentEquity
 
-	// win rate
 	if trades > 0 {
 		winRate = float64(wins) / float64(trades)
 	}
@@ -253,11 +255,10 @@ func backtestRSI(s *RSI, candles quote.Quote, verbose bool, closeAllAtEnd bool) 
 	return profit, trades, winRate, maxDD, equityCurve, len(s.SignalBuyPoints), len(s.SignalSellPoints)
 }
 
-func containsTime(data []model.IndicatorData, t time.Time) bool {
+func buildSignalMap(data []model.IndicatorData) map[int64]bool {
+	m := make(map[int64]bool, len(data))
 	for _, d := range data {
-		if d.Date.Equal(t) {
-			return true
-		}
+		m[d.Date.UnixNano()] = true
 	}
-	return false
+	return m
 }

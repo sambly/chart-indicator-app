@@ -75,7 +75,7 @@ func (h *Handler) UpdateTrendRSIData(c *gin.Context) {
 	a.Quote[a.Symbol][a.Interval] = q
 
 	// Выполняем RSI
-	h.rsi.Execute(q)
+	h.rsi.Execute(q, true)
 
 	c.JSON(http.StatusOK, gin.H{
 		"symbol":           a.Symbol,
@@ -106,7 +106,7 @@ func (h *Handler) ApplyRSIConfig(c *gin.Context) {
 		return
 	}
 
-	h.rsi.Execute(q)
+	h.rsi.Execute(q, true)
 
 	c.JSON(http.StatusOK, gin.H{
 		"chartData":        a.Quote[a.Symbol][a.Interval],
@@ -153,7 +153,7 @@ func (h *Handler) OptimizeRSIStrategy(c *gin.Context) {
 	optimizationResult := OptimizeRSIStrategy(q)
 	h.rsi.Config = optimizationResult.Config
 	h.optimization = optimizationResult
-	h.rsi.Execute(q)
+	h.rsi.Execute(q, true)
 
 	c.JSON(http.StatusOK, gin.H{
 		"config":           h.rsi.Config,

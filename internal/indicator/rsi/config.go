@@ -22,6 +22,8 @@ type Config struct {
 	RSIExitLevel float64 `yaml:"rsi_exit_level" json:"rsiExitLevel"` // уровень выхода
 
 	MinBarsBetweenTrades int `yaml:"min_bars_between_trades" json:"minBarsBetweenTrades"` // минимальное количество баров
+
+	CountSellSignals int `yaml:"count_sell_signals" json:"count_sell_signals"`
 }
 
 func NewConfig() (*Config, error) {
